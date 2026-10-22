@@ -1,0 +1,21 @@
+# build artifacts
+build/*
+!build/generated.stm32f303k8t6.ld
+*.o
+*.elf
+*.bin
+*.d
+*.map
+
+# dependencies
+libopencm3/
+
+# editor & os
+.cache/
+.DS_Store
+Thumbs.db
+
+# python artifacts
+__pycache__/
+*.pyc
+*.pyo
