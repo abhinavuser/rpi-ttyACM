@@ -1,0 +1,12 @@
+[
+  {
+    "directory": "E:/VS Code/stm-nucleo",
+    "command": "\"C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.2 rel1/bin/arm-none-eabi-gcc.exe\" -std=c11 -O2 -g3 -Wall -Wextra -ffunction-sections -fdata-sections -fno-common -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -DSTM32F3 -DSTM32F3CCM -DSTM32F303K8T6 -Ilibopencm3/include -Iapp/inc -c app/src/main.c -o build/main.o",
+    "file": "E:/VS Code/stm-nucleo/app/src/main.c"
+  },
+  {
+    "directory": "E:/VS Code/stm-nucleo",
+    "command": "\"C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.2 rel1/bin/arm-none-eabi-gcc.exe\" -std=c11 -O2 -g3 -Wall -Wextra -ffunction-sections -fdata-sections -fno-common -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -DSTM32F3 -DSTM32F3CCM -DSTM32F303K8T6 -Ilibopencm3/include -Iapp/inc -c app/src/core/system.c -o build/core/system.o",
+    "file": "E:/VS Code/stm-nucleo/app/src/core/system.c"
+  }
+]
