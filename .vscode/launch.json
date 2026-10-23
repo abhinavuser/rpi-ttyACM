@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug STM32F303K8 (OpenOCD)",
+      "type": "cortex-debug",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "servertype": "openocd",
+      "configFiles": [
+        "openocd.cfg"
+      ],
+      "executable": "${workspaceFolder}/build/blinky.elf",
+      "device": "STM32F303K8",
+      "runToEntryPoint": "main",
+      "preLaunchTask": "build"
+    }
+  ]
+}

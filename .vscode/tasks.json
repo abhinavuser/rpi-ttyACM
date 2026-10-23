@@ -1,0 +1,59 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "setup libopencm3",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/setup_libopencm3.ps1"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/build.ps1"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "flash",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/flash.ps1"
+      ],
+      "dependsOn": [
+        "build"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "openocd server",
+      "type": "shell",
+      "command": "openocd",
+      "args": [
+        "-f",
+        "openocd.cfg"
+      ],
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}
