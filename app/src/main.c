@@ -8,13 +8,24 @@ void tim7_isr(void) {
     if (timer_get_flag(TIM7, TIM_SR_UIF)) {
         timer_clear_flag(TIM7, TIM_SR_UIF);
         gpio_toggle(GPIOB, GPIO3);
+        gpio_toggle(GPIOF, GPIO0);
+        gpio_toggle(GPIOA, GPIO1);
     }
 }
 
 static void tdr_pulse_setup(void) {
     rcc_periph_clock_enable(RCC_GPIOB);
+    rcc_periph_clock_enable(RCC_GPIOF);
+    rcc_periph_clock_enable(RCC_GPIOA);
+
     gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO3);
     gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, GPIO3);
+
+    gpio_mode_setup(GPIOF, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO0);
+    gpio_set_output_options(GPIOF, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, GPIO0);
+
+    gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO1);
+    gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, GPIO1);
 
     rcc_periph_clock_enable(RCC_TIM7);
     timer_set_prescaler(TIM7, 0);
