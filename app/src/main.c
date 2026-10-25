@@ -189,17 +189,40 @@ static void lcd_set_cursor(uint8_t row, uint8_t col) {
   lcd_send_byte(0x80 | (address_offsets[row] + col), 0);
 }
 
-static void delay_ms(uint32_t milliseconds) {
-    uint32_t start = system_millis;
-    while ((uint32_t)(system_millis - start) < milliseconds);
+static void adc_setup(void) {
+  rcc_periph_clock_enable(RCC_GPIOA);
+  /* Configure PA0 as analog input */
+  gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
+
+  /* STM32F3 ADC setup */
+  rcc_periph_clock_enable(RCC_ADC12);
+  adc_power_off(ADC1);
+
+  /* Using synchronous clock mode by default for F3 ADC */
+  ADC12_CCR |= (1 << 16); // Set CKMODE to 01 (sync AHB clock divided by 1)
+
+  adc_power_on(ADC1);
+  delay_ms(1); /* Wait for ADC to stabilize */
+}
+
+static uint16_t read_adc(void) {
+  uint8_t channel_array[1] = {1}; /* PA0 is ADC1_IN1 */
+  adc_set_regular_sequence(ADC1, 1, channel_array);
+  adc_start_conversion_regular(ADC1);
+  while (!adc_eoc(ADC1))
+    ;
+  return adc_read_regular(ADC1);
 }
 
 int main(void) {
     system_setup();
     tdr_pulse_setup();
     dac_function_generator_setup();
+    adc_setup();
 
     while (1) {
+        uint16_t raw = read_adc();
+        (void)raw;
         delay_ms(100);
     }
 }
