@@ -221,8 +221,9 @@ int main(void) {
     adc_setup();
 
     while (1) {
-        uint16_t raw = read_adc();
-        (void)raw;
-        delay_ms(100);
+        uint16_t val = read_adc();
+        uint32_t vmV = ((uint32_t)val * 3300U) / 4095U;
+        (void)vmV;
+        delay_ms(200);
     }
 }
