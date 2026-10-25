@@ -189,6 +189,21 @@ static void lcd_set_cursor(uint8_t row, uint8_t col) {
   lcd_send_byte(0x80 | (address_offsets[row] + col), 0);
 }
 
+static void i2c_setup(void) {
+    rcc_periph_clock_enable(RCC_GPIOB);
+    gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6 | GPIO7);
+    gpio_set_output_options(GPIOB, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ, GPIO6 | GPIO7);
+    gpio_set_af(GPIOB, GPIO_AF4, GPIO6 | GPIO7);
+
+    rcc_periph_clock_enable(RCC_I2C1);
+    i2c_peripheral_disable(I2C1);
+    i2c_set_speed(I2C1, i2c_speed_sm_100k, 8);
+    i2c_peripheral_enable(I2C1);
+}
+
+static void lcd_write(uint8_t data) {
+    i2c_transfer7(I2C1, LCD_ADDR, &data, 1, NULL, 0);
+}
 static void adc_setup(void) {
   rcc_periph_clock_enable(RCC_GPIOA);
   /* Configure PA0 as analog input */
@@ -219,11 +234,11 @@ int main(void) {
     tdr_pulse_setup();
     dac_function_generator_setup();
     adc_setup();
+    i2c_setup();
 
     while (1) {
         uint16_t val = read_adc();
-        uint32_t vmV = ((uint32_t)val * 3300U) / 4095U;
-        (void)vmV;
+        (void)val;
         delay_ms(200);
     }
 }
