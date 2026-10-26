@@ -225,8 +225,19 @@ int main(void) {
     lcd_set_cursor(0, 0);
     lcd_print("TDR Demo Started");
     delay_ms(1000);
+    lcd_send_byte(0x01, 0);
+    delay_ms(2);
 
     while (1) {
-        delay_ms(500);
+        uint16_t val = read_adc();
+        lcd_set_cursor(0, 0);
+        if (val > 3800) {
+            lcd_print("FAULT: OPEN     ");
+        } else if (val < 200) {
+            lcd_print("FAULT: SHORT    ");
+        } else {
+            lcd_print("NORMAL (LOAD OK)");
+        }
+        delay_ms(300);
     }
 }
