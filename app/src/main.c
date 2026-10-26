@@ -214,6 +214,28 @@ static uint16_t read_adc(void) {
   return adc_read_regular(ADC1);
 }
 
+static void uint_to_str(uint32_t val, char *buf) {
+    char temp[12];
+    int i = 0;
+    if (val == 0) { buf[0] = '0'; buf[1] = '\0'; return; }
+    while (val > 0) { temp[i++] = (char)('0' + (val % 10)); val /= 10; }
+    int j = 0;
+    while (i > 0) { buf[j++] = temp[--i]; }
+    buf[j] = '\0';
+}
+
+static void format_tenths(uint32_t tenths, char *buf) {
+    char int_part[12];
+    uint32_t whole = tenths / 10U;
+    uint32_t frac = tenths % 10U;
+    uint_to_str(whole, int_part);
+    int i = 0;
+    while (int_part[i]) { buf[i] = int_part[i]; i++; }
+    buf[i++] = '.';
+    buf[i++] = (char)('0' + frac);
+    buf[i] = '\0';
+}
+
 int main(void) {
     system_setup();
     tdr_pulse_setup();
@@ -230,13 +252,38 @@ int main(void) {
 
     while (1) {
         uint16_t val = read_adc();
+        uint32_t d_tenths = 0;
+        uint32_t t_tenths = 0;
+
+        if (val > 3800) {
+            uint32_t delta = (uint32_t)(val - 3800);
+            d_tenths = (delta * 160U) / 295U;
+            if (d_tenths > 160U) d_tenths = 160U;
+            t_tenths = (d_tenths + 5U) / 10U;
+        } else if (val < 200) {
+            d_tenths = ((uint32_t)val * 160U) / 200U;
+            if (d_tenths > 160U) d_tenths = 160U;
+            t_tenths = (d_tenths + 5U) / 10U;
+        }
+
+        char d_str[16];
+        char t_str[16];
+        format_tenths(d_tenths, d_str);
+        format_tenths(t_tenths, t_str);
+
         lcd_set_cursor(0, 0);
         if (val > 3800) {
             lcd_print("FAULT: OPEN     ");
+            lcd_set_cursor(1, 0);
+            lcd_print("d="); lcd_print(d_str); lcd_print("cm t="); lcd_print(t_str); lcd_print("ns  ");
         } else if (val < 200) {
             lcd_print("FAULT: SHORT    ");
+            lcd_set_cursor(1, 0);
+            lcd_print("d="); lcd_print(d_str); lcd_print("cm t="); lcd_print(t_str); lcd_print("ns  ");
         } else {
             lcd_print("NORMAL (LOAD OK)");
+            lcd_set_cursor(1, 0);
+            lcd_print("LINE INTACT     ");
         }
         delay_ms(300);
     }
