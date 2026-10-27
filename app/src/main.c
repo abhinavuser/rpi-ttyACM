@@ -214,77 +214,179 @@ static uint16_t read_adc(void) {
   return adc_read_regular(ADC1);
 }
 
-static void uint_to_str(uint32_t val, char *buf) {
-    char temp[12];
-    int i = 0;
-    if (val == 0) { buf[0] = '0'; buf[1] = '\0'; return; }
-    while (val > 0) { temp[i++] = (char)('0' + (val % 10)); val /= 10; }
-    int j = 0;
-    while (i > 0) { buf[j++] = temp[--i]; }
-    buf[j] = '\0';
+#include <libopencm3/stm32/usart.h>
+
+/*
+ * USART2 Setup (PA2 = TX, PA15 = RX, 115200 8N1)
+ * Connected directly to ST-LINK Virtual COM Port (USB) and pin A7.
+ */
+static void usart_setup(void) {
+  rcc_periph_clock_enable(RCC_GPIOA);
+  rcc_periph_clock_enable(RCC_USART2);
+
+  gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO2 | GPIO15);
+  gpio_set_af(GPIOA, GPIO_AF7, GPIO2 | GPIO15);
+  gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, GPIO2);
+
+  usart_set_baudrate(USART2, 115200);
+  usart_set_databits(USART2, 8);
+  usart_set_stopbits(USART2, USART_STOPBITS_1);
+  usart_set_mode(USART2, USART_MODE_TX);
+  usart_set_parity(USART2, USART_PARITY_NONE);
+  usart_set_flow_control(USART2, USART_FLOWCONTROL_NONE);
+
+  usart_enable(USART2);
 }
 
+static void usart_send_char(char c) {
+  usart_send_blocking(USART2, (uint16_t)c);
+}
+
+static void usart_send_str(const char *str) {
+  while (*str) {
+    usart_send_char(*str++);
+  }
+}
+
+/* Helper to format unsigned integer into string buffer */
+static void uint_to_str(uint32_t val, char *buf) {
+  char temp[12];
+  int i = 0;
+  if (val == 0) {
+    buf[0] = '0';
+    buf[1] = '\0';
+    return;
+  }
+  while (val > 0) {
+    temp[i++] = (char)('0' + (val % 10));
+    val /= 10;
+  }
+  int j = 0;
+  while (i > 0) {
+    buf[j++] = temp[--i];
+  }
+  buf[j] = '\0';
+}
+
+/* Helper to format value in tenths (e.g. 50 -> "5.0", 505 -> "50.5") into string buffer */
 static void format_tenths(uint32_t tenths, char *buf) {
-    char int_part[12];
-    uint32_t whole = tenths / 10U;
-    uint32_t frac = tenths % 10U;
-    uint_to_str(whole, int_part);
-    int i = 0;
-    while (int_part[i]) { buf[i] = int_part[i]; i++; }
-    buf[i++] = '.';
-    buf[i++] = (char)('0' + frac);
-    buf[i] = '\0';
+  char int_part[12];
+  uint32_t whole = tenths / 10U;
+  uint32_t frac = tenths % 10U;
+  uint_to_str(whole, int_part);
+  int i = 0;
+  while (int_part[i]) {
+    buf[i] = int_part[i];
+    i++;
+  }
+  buf[i++] = '.';
+  buf[i++] = (char)('0' + frac);
+  buf[i] = '\0';
 }
 
 int main(void) {
-    system_setup();
-    tdr_pulse_setup();
-    dac_function_generator_setup();
-    adc_setup();
-    i2c_setup();
-    lcd_init();
+  system_setup();
+  tdr_pulse_setup(); /* START SQUARE WAVE IMMEDIATELY AT BOOT! */
+  dac_function_generator_setup();
+  adc_setup();
+  usart_setup();     /* UART link to Raspberry Pi at 115200 baud */
+  i2c_setup();
+  lcd_init();
 
-    lcd_set_cursor(0, 0);
-    lcd_print("TDR Demo Started");
-    delay_ms(1000);
-    lcd_send_byte(0x01, 0);
-    delay_ms(2);
+  lcd_set_cursor(0, 0);
+  lcd_print("TDR Demo Started");
+  lcd_set_cursor(1, 0);
+  lcd_print("UART: 115200 8N1");
+  delay_ms(1500);
+  lcd_send_byte(0x01, 0); /* Clear display */
+  delay_ms(2);
 
-    while (1) {
-        uint16_t val = read_adc();
-        uint32_t d_tenths = 0;
-        uint32_t t_tenths = 0;
+  while (1) {
+    uint16_t val = read_adc();
+    /* Compute voltage in mV: val * 3300 / 4095 */
+    uint32_t vmV = ((uint32_t)val * 3300U) / 4095U;
+    uint32_t v_int = vmV / 1000U;
+    uint32_t v_dec = (vmV % 1000U) / 10U; /* 2 decimal digits */
 
-        if (val > 3800) {
-            uint32_t delta = (uint32_t)(val - 3800);
-            d_tenths = (delta * 160U) / 295U;
-            if (d_tenths > 160U) d_tenths = 160U;
-            t_tenths = (d_tenths + 5U) / 10U;
-        } else if (val < 200) {
-            d_tenths = ((uint32_t)val * 160U) / 200U;
-            if (d_tenths > 160U) d_tenths = 160U;
-            t_tenths = (d_tenths + 5U) / 10U;
-        }
+    char v_str[16];
+    char v_dec_str[8];
+    uint_to_str(v_int, v_str);
+    uint_to_str(v_dec, v_dec_str);
 
-        char d_str[16];
-        char t_str[16];
-        format_tenths(d_tenths, d_str);
-        format_tenths(t_tenths, t_str);
+    const char *status;
+    uint32_t d_tenths = 0; /* Distance in tenths of a centimeter (0 to 160 -> 0.0 to 16.0 cm) */
+    uint32_t t_tenths = 0; /* Time in tenths of a nanosecond (0 to 16 -> 0.0 to 1.6 ns) */
 
-        lcd_set_cursor(0, 0);
-        if (val > 3800) {
-            lcd_print("FAULT: OPEN     ");
-            lcd_set_cursor(1, 0);
-            lcd_print("d="); lcd_print(d_str); lcd_print("cm t="); lcd_print(t_str); lcd_print("ns  ");
-        } else if (val < 200) {
-            lcd_print("FAULT: SHORT    ");
-            lcd_set_cursor(1, 0);
-            lcd_print("d="); lcd_print(d_str); lcd_print("cm t="); lcd_print(t_str); lcd_print("ns  ");
-        } else {
-            lcd_print("NORMAL (LOAD OK)");
-            lcd_set_cursor(1, 0);
-            lcd_print("LINE INTACT     ");
-        }
-        delay_ms(300);
+    /* Original exact thresholds: LED forward voltage sits cleanly in 200..3800 range */
+    if (val > 3800) {
+      status = "OPEN";
+      /* Scale distance dynamically across 16.0 cm breadboard (0.0 to 16.0 cm) */
+      uint32_t delta = (uint32_t)(val - 3800);
+      d_tenths = (delta * 160U) / 295U;
+      if (d_tenths > 160U) d_tenths = 160U;
+      /* Physics: signal on breadboard (v ~ 20 cm/ns) -> 2-way delay t = 2*d / 20 = d / 10 ns */
+      t_tenths = (d_tenths + 5U) / 10U; /* Round to nearest 0.1 ns */
+    } else if (val < 200) {
+      status = "SHORT";
+      /* Scale distance dynamically across 16.0 cm breadboard (0.0 to 16.0 cm) */
+      d_tenths = ((uint32_t)val * 160U) / 200U;
+      if (d_tenths > 160U) d_tenths = 160U;
+      t_tenths = (d_tenths + 5U) / 10U;
+    } else {
+      status = "HEALTHY";
+      d_tenths = 0;
+      t_tenths = 0;
     }
+
+    char d_str[16];
+    char t_str[16];
+    format_tenths(d_tenths, d_str);
+    format_tenths(t_tenths, t_str);
+
+    /* 1. Update LCD Display */
+    lcd_set_cursor(0, 0);
+    if (val > 3800) {
+      lcd_print("FAULT: OPEN     ");
+      lcd_set_cursor(1, 0);
+      lcd_print("d=");
+      lcd_print(d_str);
+      lcd_print("cm t=");
+      lcd_print(t_str);
+      lcd_print("ns  ");
+    } else if (val < 200) {
+      lcd_print("FAULT: SHORT    ");
+      lcd_set_cursor(1, 0);
+      lcd_print("d=");
+      lcd_print(d_str);
+      lcd_print("cm t=");
+      lcd_print(t_str);
+      lcd_print("ns  ");
+    } else {
+      lcd_print("NORMAL (LOAD OK)");
+      lcd_set_cursor(1, 0);
+      lcd_print("V=");
+      lcd_print(v_str);
+      lcd_print(".");
+      if (v_dec < 10) lcd_print("0");
+      lcd_print(v_dec_str);
+      lcd_print("V (Intact)");
+    }
+
+    /* 2. Send Telemetry Frame to Raspberry Pi via UART */
+    /* Format: V:X.XX,T:X.X,D:X.X,STATUS:XXXX\r\n (D in cm, T in ns) */
+    usart_send_str("V:");
+    usart_send_str(v_str);
+    usart_send_str(".");
+    if (v_dec < 10) usart_send_str("0");
+    usart_send_str(v_dec_str);
+    usart_send_str(",T:");
+    usart_send_str(t_str);
+    usart_send_str(",D:");
+    usart_send_str(d_str);
+    usart_send_str(",STATUS:");
+    usart_send_str(status);
+    usart_send_str("\r\n");
+
+    delay_ms(300); /* Send update roughly 3 times a second */
+  }
 }
