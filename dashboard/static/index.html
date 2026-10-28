@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TDR Edge-AI Transmission Line Diagnostic System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="glow-bg"></div>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="nav-left">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+      </div>
+      <div>
+        <div class="logo-title">TDR EDGE-AI <span class="badge-tag">PHD CLASSIFIER</span></div>
+        <div class="logo-subtitle">Real-Time Time-Domain Reflectometry & Wire Fault Telemetry</div>
+      </div>
+    </div>
+    
+    <div class="nav-right">
+      <div class="system-status" id="connection-status">
+        <span class="status-dot pulsating"></span>
+        <span class="status-text" id="status-text">CONNECTING VCP...</span>
+      </div>
+      <div class="header-chip" id="board-port-chip">PORT: /dev/ttyACM0</div>
+      <button class="demo-btn" id="demo-toggle-btn" title="Toggle simulation mode for testing">
+        <span id="demo-mode-label">DEMO MODE</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Grid Container -->
+  <main class="dashboard-grid">
+    
+    <!-- Top Row: Big Status Hero Card -->
+    <section class="card hero-classification-card" id="hero-card">
+      <div class="card-glow-accent"></div>
+      <div class="hero-left">
+        <div class="section-label">EDGE-AI NEURAL INFERENCE ENGINE</div>
+        <div class="hero-classification-title" id="ml-classification-title">ANALYZING SIGNAL...</div>
+        <div class="hero-classification-desc" id="ml-classification-desc">
+          Waiting for reflection waveform telemetry from STM32 ST-LINK VCP...
+        </div>
+        <div class="meta-row">
+          <div class="meta-item">
+            <span class="meta-key">ARCHITECTURE:</span>
+            <span class="meta-val" id="model-arch">1D Depthwise-CNN + SE-Attention</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">INFERENCE LATENCY:</span>
+            <span class="meta-val" id="model-latency">3.4 ms</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">REFLECTION COEFF (&Gamma;):</span>
+            <span class="meta-val" id="model-gamma">+0.00</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="hero-right">
+        <div class="confidence-circle-wrap">
+          <svg class="confidence-ring" viewBox="0 0 120 120">
+            <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+            <circle class="ring-val" id="confidence-circle" cx="60" cy="60" r="50"></circle>
+          </svg>
+          <div class="confidence-content">
+            <div class="confidence-num" id="confidence-val">--%</div>
+            <div class="confidence-lbl">CONFIDENCE</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Metrics Row: Voltage, Distance, Time, Raw Frame -->
+    <section class="card metric-card">
+      <div class="metric-header">
+        <span class="metric-title">BUS VOLTAGE</span>
+        <span class="metric-badge">ADC PA0</span>
+      </div>
+      <div class="metric-body">
+        <span class="metric-value font-mono" id="metric-voltage">0.00</span>
+        <span class="metric-unit">V</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill voltage-bar" id="bar-voltage" style="width: 50%;"></div>
+      </div>
+      <div class="metric-footer">
+        <span>0.00V (GND)</span>
+        <span class="center-tag">Nominal: ~1.85V</span>
+        <span>3.30V (VCC)</span>
+      </div>
+    </section>
+
+    <section class="card metric-card">
+      <div class="metric-header">
+        <span class="metric-title">FAULT DISTANCE</span>
+        <span class="metric-badge">BREADBOARD (16cm)</span>
+      </div>
+      <div class="metric-body">
+        <span class="metric-value font-mono" id="metric-distance">0.0</span>
+        <span class="metric-unit">cm</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill distance-bar" id="bar-distance" style="width: 0%;"></div>
+      </div>
+      <div class="metric-footer">
+        <span>0.0 cm (Port)</span>
+        <span class="center-tag">Echo Delay</span>
+        <span>16.0 cm (Max)</span>
+      </div>
+    </section>
+
+    <section class="card metric-card">
+      <div class="metric-header">
+        <span class="metric-title">TIME OF FLIGHT</span>
+        <span class="metric-badge">TDR PROPAGATION</span>
+      </div>
+      <div class="metric-body">
+        <span class="metric-value font-mono" id="metric-time">0.0</span>
+        <span class="metric-unit">ns</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill time-bar" id="bar-time" style="width: 0%;"></div>
+      </div>
+      <div class="metric-footer">
+        <span>0.0 ns</span>
+        <span class="center-tag">v &approx; 20 cm/ns</span>
+        <span>1.6 ns</span>
+      </div>
+    </section>
+
+    <section class="card metric-card">
+      <div class="metric-header">
+        <span class="metric-title">RAW TELEMETRY</span>
+        <span class="metric-badge">115200 8N1</span>
+      </div>
+      <div class="metric-raw-box font-mono" id="metric-raw">
+        V:0.00,T:0.0,D:0.0,STATUS:WAITING
+      </div>
+      <div class="metric-footer">
+        <span>Framing: ASCII</span>
+        <span id="rate-counter">Rate: ~3.3 Hz</span>
+      </div>
+    </section>
+
+    <!-- Main Chart: Real-time TDR Oscilloscope Waveform -->
+    <section class="card waveform-card">
+      <div class="card-header-bar">
+        <div>
+          <div class="card-title">REAL-TIME TDR WAVEFORM OSCILLOSCOPE</div>
+          <div class="card-subtitle">Synthesized transmission line reflection profile matching 1D-CNN input vector</div>
+        </div>
+        <div class="scope-controls">
+          <span class="legend-item"><span class="legend-color pulse-color"></span> TX Pulse (t=0)</span>
+          <span class="legend-item"><span class="legend-color reflection-color"></span> Reflected Echo (t=T)</span>
+          <span class="legend-item"><span class="legend-color noise-color"></span> Grid AWGN</span>
+        </div>
+      </div>
+      <div class="canvas-container">
+        <canvas id="tdr-canvas"></canvas>
+      </div>
+    </section>
+
+    <!-- Class Probabilities Bar Breakdown -->
+    <section class="card probabilities-card">
+      <div class="card-header-bar">
+        <div>
+          <div class="card-title">SOFTMAX CLASS PROBABILITIES</div>
+          <div class="card-subtitle">Squeeze-and-Excitation Attention layer outputs</div>
+        </div>
+      </div>
+      <div class="probs-list">
+        <div class="prob-row">
+          <div class="prob-labels">
+            <span class="prob-name">Class 0: Healthy Line (Load OK)</span>
+            <span class="prob-num font-mono" id="prob-healthy">0.0%</span>
+          </div>
+          <div class="prob-track">
+            <div class="prob-fill fill-healthy" id="prob-bar-healthy" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="prob-row">
+          <div class="prob-labels">
+            <span class="prob-name">Class 1: Open Circuit Fault (&Gamma; &approx; +1.0)</span>
+            <span class="prob-num font-mono" id="prob-open">0.0%</span>
+          </div>
+          <div class="prob-track">
+            <div class="prob-fill fill-open" id="prob-bar-open" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="prob-row">
+          <div class="prob-labels">
+            <span class="prob-name">Class 2: Short Circuit Fault (&Gamma; &approx; -1.0)</span>
+            <span class="prob-num font-mono" id="prob-short">0.0%</span>
+          </div>
+          <div class="prob-track">
+            <div class="prob-fill fill-short" id="prob-bar-short" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="prob-row">
+          <div class="prob-labels">
+            <span class="prob-name">Class 3: High-Z Tapping / Line Anomaly</span>
+            <span class="prob-num font-mono" id="prob-tap">0.0%</span>
+          </div>
+          <div class="prob-track">
+            <div class="prob-fill fill-tap" id="prob-bar-tap" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Real-time Event Log -->
+    <section class="card log-card">
+      <div class="card-header-bar">
+        <div>
+          <div class="card-title">LIVE INFERENCE EVENT FEED</div>
+          <div class="card-subtitle">Rolling timestamped classification decisions</div>
+        </div>
+        <button class="clear-btn" id="clear-log-btn">CLEAR</button>
+      </div>
+      <div class="event-log-box font-mono" id="event-log">
+        <div class="log-entry system">
+          <span class="log-time">[SYSTEM]</span> Dashboard initialized. Listening on /api/stream...
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div>NUCLEO-F303K8 Bare-Metal Hardware &bull; ST-LINK/V2.1 Virtual COM Port &bull; Raspberry Pi 5 Edge Hub</div>
+    <div>1D-CNN Model: Depthwise MobileNetV2 + SE-Attention &bull; Latency: 3.4ms</div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
