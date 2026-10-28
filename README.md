@@ -1,4 +1,4 @@
-# rpi-stm-ssh
+# reflectometry on rpi
 
 real-time telemetry pipeline connecting an analog test circuit, stm32f303k8 microcontroller, and a raspberry pi over uart, with a live web dashboard hosted on the pi.
 
