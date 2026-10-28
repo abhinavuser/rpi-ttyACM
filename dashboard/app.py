@@ -291,7 +291,7 @@ def main():
     server_address = ('0.0.0.0', PORT)
     httpd = ServerClass(server_address, DashboardHandler)
     print("=" * 65)
-    print("  🚀 TDR EDGE-AI DIAGNOSTIC DASHBOARD ONLINE")
+    print("  ???? TDR EDGE-AI DIAGNOSTIC DASHBOARD ONLINE")
     print(f"  Access in browser: http://localhost:{PORT}")
     print(f"  On LAN/Raspberry Pi: http://chip.local:{PORT}")
     print("=" * 65)
@@ -304,3 +304,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
